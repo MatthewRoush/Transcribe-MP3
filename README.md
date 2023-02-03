@@ -7,7 +7,7 @@
 [openai-whisper](https://pypi.org/project/openai-whisper/) for transcribing the mp3 file.
 
 ## Usage
-This is a command-line program that lets you generate lyrics or set lyrics with a lrc file for a mp3 file.
+This is a command-line program that lets you set lyrics for a mp3 file by generating lyrics using openai-whisper or setting lyrics using a lrc file.
 
 It generates SYLT and USLT lyrics and has the option to output a lrc file in a folder called "lyrics" in the same directory as the mp3 file.
 
