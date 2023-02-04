@@ -1,5 +1,6 @@
 import os
 import argparse
+import whisper
 from gen_lyrics import gen_lyrics
 from set_lyrics import set_lyrics
 
@@ -37,6 +38,15 @@ def main():
         print("\nInvalid path.")
         return
 
+    try:
+        model = whisper.load_model(args.model)
+    except RuntimeError:
+        print(
+            "Invalid model. \n"
+            "Valid models are: tiny, tiny.en, base, base.en, "
+            "small, small.en, medium, medium.en, large, large-v1, large-v2")
+        return
+
     if os.path.isfile(args.path):
         if args.set_lyrics is not None:
             if not os.path.exists(args.set_lyrics):
@@ -49,13 +59,13 @@ def main():
                 print("\nlrc must be a file.")
                 return
         else:
-            gen_lyrics(args.model, args.path, args.lrc)
+            gen_lyrics(model, args.path, args.lrc)
     else:
         for dirpath, folders, files_list in os.walk(args.path):
             for file in files_list:
                 if file[-4:] == ".mp3":
                     path = os.path.join(dirpath, file)
-                    gen_lyrics(args.model, path, args.lrc)
+                    gen_lyrics(model, path, args.lrc)
 
 if __name__ == '__main__':
     main()

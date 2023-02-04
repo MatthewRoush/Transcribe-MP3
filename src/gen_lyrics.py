@@ -1,6 +1,5 @@
 import os
 from time import monotonic
-import whisper
 from mutagen import MutagenError
 from mutagen.mp3 import MP3, HeaderNotFoundError
 from mutagen.id3 import ID3, SYLT, USLT, Encoding
@@ -35,15 +34,6 @@ def gen_lyrics(model, song_path, lrc):
         song_name = song["TIT2"].text[0]
     except KeyError:
         song_name = "Unknown Song"
-
-    try:
-        model = whisper.load_model(model)
-    except RuntimeError:
-        print(
-            "Invalid model. \n"
-            "Valid models are: tiny, tiny.en, base, base.en, "
-            "small, small.en, medium, medium.en, large, large-v1, large-v2")
-        return
 
     # song_path has already been checked, so assume it's good.
     result = model.transcribe(song_path)
