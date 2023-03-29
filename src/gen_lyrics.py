@@ -1,4 +1,5 @@
 import os
+import io
 from time import monotonic
 from mutagen import MutagenError
 from mutagen.mp3 import MP3, HeaderNotFoundError
@@ -12,9 +13,6 @@ def gen_lyrics(model, song_path, lrc):
         tag = ID3(song_path)
     except HeaderNotFoundError:
         print("Not an mp3 file or invalid mp3 file.")
-        return
-    except MutagenError:
-        print("Could not find mp3 file. Invalid file path.")
         return
 
     # Try to get the artist name from the mp3 metadata.
@@ -35,21 +33,22 @@ def gen_lyrics(model, song_path, lrc):
     except KeyError:
         song_name = "Unknown Song"
 
+    print(f"\nGenerating lyrics for '{song_name}'...")
     # song_path has already been checked, so assume it's good.
-    result = model.transcribe(song_path)
+    result = model.transcribe(song_path, verbose=False)
 
     sylt = [] # Synced lyrics metadata.
-    uslt = "" # Unsynced lyrics metadata.
+    uslt = io.StringIO() # Unsynced lyrics metadata.
 
     if lrc:
-        lrc_file = "" # Synced lyrics file.
+        lrc_file = io.StringIO() # Synced lyrics file.
         # Initialize .lrc file.
-        lrc_file += f"[ar:{artist_name}]\n"
-        lrc_file += f"[al:{album_name}]\n"
-        lrc_file += f"[ti:{song_name}]\n"
-        lrc_file += f"[la:{result['language'].upper()}]\n"
-        lrc_file += "[by:Matthew Roush]\n"
-        lrc_file += "[re:https://github.com/MatthewRoush/Transcribe-MP3]\n\n"
+        lrc_file.write(f"[ar:{artist_name}]\n")
+        lrc_file.write(f"[al:{album_name}]\n")
+        lrc_file.write(f"[ti:{song_name}]\n")
+        lrc_file.write(f"[la:{result['language'].upper()}]\n")
+        lrc_file.write("[by:Matthew Roush]\n")
+        lrc_file.write("[re:https://github.com/MatthewRoush/Transcribe-MP3]\n\n")
 
     for segment in result["segments"]:
         start = segment["start"] # Time when the line starts, in seconds.
@@ -57,17 +56,23 @@ def gen_lyrics(model, song_path, lrc):
         line = segment["text"].strip()
 
         if lrc:
-            if start < 60.0:
-                start_str = f"[00:{round(start, 3)}]"
-            else:
-                minutes = int(start / 60.0)
-                seconds = start % 60.0
-                start_str = f"[{minutes}:{round(seconds, 3)}]"
-        
-            lrc_file += start_str + line + "\n"
+            xx = start * 100
+            ss, xx = divmod(xx, 100)
+            mm, ss = divmod(ss, 60)
 
-        uslt += line + "\n"
+            xx = fill_zeros(xx)
+            ss = fill_zeros(ss)
+            mm = fill_zeros(mm)
+
+            start_str = f"[{mm}:{ss}.{xx}]"
+        
+            lrc_file.write(start_str + line + "\n")
+
+        uslt.write(line + "\n")
         sylt.append((line, start_ms))
+
+    uslt = uslt.getvalue()
+    lrc_file = lrc_file.getvalue()
 
     if lrc:
         song_folder = os.path.split(song_path)[0]
@@ -87,10 +92,19 @@ def gen_lyrics(model, song_path, lrc):
         with open(lrc_path, "w", encoding="UTF-8") as f:
             f.write(lrc_file)
 
-    tag.setall("SYLT",
-                [SYLT(encoding=Encoding.UTF8, format=2, type=1,text=sylt)])
+    tag.setall("SYLT", [SYLT(encoding=Encoding.UTF8, 
+                             format=2, type=1, text=sylt)])
     tag.setall("USLT", [USLT(encoding=Encoding.UTF8, text=uslt)])
     tag.save(v2_version=3)
 
-    completion_time = round(monotonic() - start_time, 3)
-    print(f"Successfully generated lyrics | {song_name} | {completion_time}s")
+    time = round(monotonic() - start_time, 3)
+    print(f"Successfully generated lyrics for '{song_name}' | {time}s")
+
+def fill_zeros(num):
+    num = str(int(num))
+    length = len(num)
+
+    if length == 1:
+        num = "0" + num
+
+    return num

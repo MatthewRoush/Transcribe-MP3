@@ -1,4 +1,5 @@
 import os
+import warnings
 import argparse
 import whisper
 from gen_lyrics import gen_lyrics
@@ -14,22 +15,22 @@ def main():
                             "Put in single or double quotes if the "
                             "path contains spaces."))
     
-    parser.add_argument("--model",
+    parser.add_argument("-m", "--model",
                         default="base.en",
                         help=("Whisper model to use (tiny, tiny.en, base, "
                             "base.en, small, small.en, medium, medium.en, "
                             "large, large-v1, large-v2)"))
     
-    parser.add_argument("--lrc",
+    parser.add_argument("-l", "--lrc",
                         action="store_true",
                         help=("Flag for creating an lrc file to output "
                             "synced lyrics data to."))
     
-    parser.add_argument("--set-lyrics",
+    parser.add_argument("-s", "--set-lyrics",
                         help=("You can use this to fix generated lyrics by "
                             "fixing the lyrics in the lrc file this script "
                             "creates, then set path to the path of the mp3 "
-                            " file and give the path to the lrc file after "
+                            "file and give the path to the lrc file after "
                             "this argument."))
 
     args = parser.parse_args()
@@ -46,6 +47,10 @@ def main():
             "Valid models are: tiny, tiny.en, base, base.en, "
             "small, small.en, medium, medium.en, large, large-v1, large-v2")
         return
+
+    # Ignore warning that whisper.model().transcribe() gives when using CPU.
+    warnings.filterwarnings("ignore",
+        message="FP16 is not supported on CPU; using FP32 instead")
 
     if os.path.isfile(args.path):
         if args.set_lyrics is not None:
